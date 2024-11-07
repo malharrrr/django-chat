@@ -9,25 +9,29 @@
 ### Setup Instructions
 
 1. **Clone this repository:**
+   ```bash
    git clone https://github.com/malharrrr/django-chat.git
-   cd django-chatapp
+   cd django-chat
 
-2. **Create a virtual environment:**
+3. **Create a virtual environment:**
+   ```bash
     python -m venv venv
     source venv/bin/activate  #for macOS
     venv\Scripts\activate.bat  # Windows
 
-3. **Install dependencies:**
+5. **Install dependencies:**
+    ```bash
     pip/pip3 install -r requirements.txt
 
-4. **Apply database migrations:**
+7. **Apply database migrations:**
+    ```bash
     python/python3 manage.py makemigrations
     python/python3 manage.py migrate
 
-5. **Create a superuser for access to admin panel (localhost:8000/admin || 127.0.0.1/admin):**
-
+9. **Create a superuser for access to admin panel (localhost:8000/admin || 127.0.0.1/admin):**
+    ```bash
     python/python3 manage.py createsuperuser
 
-6. **Start the development server:**
-    
+10. **Start the development server:**
+    ```bash
     python/python3 manage.py runserver

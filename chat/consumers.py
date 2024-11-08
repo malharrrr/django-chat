@@ -2,6 +2,7 @@ from django.shortcuts import get_object_or_404
 from django.template.loader import render_to_string
 from django.db.models import Q
 from django.core.files.base import ContentFile
+from django.contrib.auth import get_user_model
 
 from channels.generic.websocket import WebsocketConsumer
 from asgiref.sync import async_to_sync
@@ -23,10 +24,8 @@ class ChatConsumer(WebsocketConsumer):
         
         self.accept()
 
-        
     def receive(self, text_data):
         data = json.loads(text_data)
-        
         text_data = data.get('message')
         file_data = data.get('file')
         
@@ -37,14 +36,17 @@ class ChatConsumer(WebsocketConsumer):
                 decoded_data = base64.b64decode(file_object)
                 file_instance = ContentFile(decoded_data, name=f"message_file.{file_format.split('/')[1]}")
 
-            
-            # chat = Chat.objects.filter(Q(members__in=[self.user]) & Q(members__in=[self.other_user]) & Q(type='OO')).first()
-            chat = Chat.objects.filter(members__in=[self.other_user]).filter(members__in=[self.user]).filter(type='OO').first()
+            chat = Chat.objects.filter(
+                members__in=[self.other_user]
+            ).filter(
+                members__in=[self.user]
+            ).filter(type='OO').first()
             
             if chat is None:
                 chat = Chat.objects.create(type='OO', owner=self.user, name='single-chat')
                 chat.members.add(*[self.user, self.other_user])
             self.chat_username = chat.username
+            
             message = SingleChatMessage.objects.create(chat=chat, sender=self.user, message=text_data, files=file_instance)
             
             data = {
@@ -62,10 +64,9 @@ class ChatConsumer(WebsocketConsumer):
     
     def receiver(self, data):
         message_object = SingleChatMessage.objects.get(pk=data['message_id'])
-        message = render_to_string('chat/snippets/single-message.html', context={ 'message': message_object, 'maybe_owner': self.user })
+        message = render_to_string('chat/snippets/single-message.html', context={'message': message_object, 'maybe_owner': self.user})
         
         data['message'] = message
-        
         data = json.dumps(data)
         self.send(data)
     
@@ -79,13 +80,12 @@ class PublicGroupChatConsumer(WebsocketConsumer):
         self.accept()
         
         async_to_sync(self.channel_layer.group_add)(self.group_username, self.channel_name)
-        if not self.user in self.public_group.online_members.all():
+        if not self.public_group.online_members.filter(id=self.user.id).exists():
             self.public_group.online_members.add(self.user)
         self.online_status()
             
     def receive(self, text_data):
         data = json.loads(text_data)
-        
         text_data = data.get('message')
         file_data = data.get('file')
         
@@ -108,17 +108,16 @@ class PublicGroupChatConsumer(WebsocketConsumer):
         
     
     def disconnect(self, code):
-        if self.user in self.public_group.online_members.all():
+        if self.public_group.online_members.filter(id=self.user.id).exists():
             self.public_group.online_members.remove(self.user)
         self.online_status()
         async_to_sync(self.channel_layer.group_discard)(self.group_username, self.channel_name)
     
     def receiver(self, data):
         message_object = SingleChatMessage.objects.get(pk=data['message_id'])
-        message = render_to_string('chat/snippets/single-message.html', context={ 'message': message_object, 'maybe_owner': self.user })
+        message = render_to_string('chat/snippets/single-message.html', context={'message': message_object, 'maybe_owner': self.user})
         
         data['message'] = message
-        
         data = json.dumps(data)
         self.send(data)
     
@@ -137,9 +136,19 @@ class PublicGroupChatConsumer(WebsocketConsumer):
 
 
 class PrivateGroupChatConsumer(WebsocketConsumer):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.private_group = None  # Initialize private_group as None
+
     def connect(self):
         self.group_username = self.scope['url_route']['kwargs']['group_username']
         self.user = self.scope['user']
+        
+        if not self.user.is_authenticated:
+            self.close()
+            return
+        self.user = self.user._wrapped if hasattr(self.user, '_wrapped') else self.user
+
         self.private_group = get_object_or_404(Chat, username=self.group_username, type='PR')
         
         self.accept()
@@ -150,7 +159,6 @@ class PrivateGroupChatConsumer(WebsocketConsumer):
             
     def receive(self, text_data):
         data = json.loads(text_data)
-        
         text_data = data.get('message')
         file_data = data.get('file')
         
@@ -171,17 +179,18 @@ class PrivateGroupChatConsumer(WebsocketConsumer):
             async_to_sync(self.channel_layer.group_send)(self.group_username, data)
         
     
-    def disconnect(self, code):
-        self.private_group.online_members.remove(self.user)
-        self.online_status()
+    def disconnect(self, close_code):
+        # Check if private_group was set before accessing it
+        if self.private_group and self.private_group.online_members.filter(id=self.user.id).exists():
+            self.private_group.online_members.remove(self.user)
+            self.online_status()
+        
         async_to_sync(self.channel_layer.group_discard)(self.group_username, self.channel_name)
-    
     def receiver(self, data):
         message_object = SingleChatMessage.objects.get(pk=data['message_id'])
-        message = render_to_string('chat/snippets/single-message.html', context={ 'message': message_object, 'maybe_owner': self.user })
+        message = render_to_string('chat/snippets/single-message.html', context={'message': message_object, 'maybe_owner': self.user})
         
         data['message'] = message
-        
         data = json.dumps(data)
         self.send(data)
     

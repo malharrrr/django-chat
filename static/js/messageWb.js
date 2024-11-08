@@ -2,8 +2,9 @@ const currentUrl = window.location.href;
 const chatType = currentUrl.split('/')[4];
 const chatUsername = currentUrl.split('/')[6];
 const singleChat = currentUrl.split('/')[5];
-const group = (singleChat === 'single-chat') ? '' : '-group'
-const urlwb = `wss://nima-gap.up.railway.app/websocket/${ chatType }${ group }/${ chatUsername }`;
+const group = (singleChat === 'single-chat') ? '' : '-group';
+// Updated URL to connect locally
+const urlwb = `ws://localhost:8000/websocket/${ chatType }${ group }/${ chatUsername }`;
 const chat_websocket = new WebSocket(urlwb);
 const sendBTN = document.getElementById('sendButton');
 const textData = document.getElementById('text-data');

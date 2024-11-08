@@ -3,13 +3,14 @@ const chatType = currentUrl.split('/')[4];
 const chatUsername = currentUrl.split('/')[6];
 const singleChat = currentUrl.split('/')[5];
 const group = (singleChat === 'single-chat') ? '' : '-group';
-// Updated URL to connect locally
+// ws issue fix
 const urlwb = `ws://localhost:8000/websocket/${ chatType }${ group }/${ chatUsername }`;
 const chat_websocket = new WebSocket(urlwb);
 const sendBTN = document.getElementById('sendButton');
 const textData = document.getElementById('text-data');
 const fileInput = document.getElementById('file-input');
 const chatArea = document.getElementsByClassName('chat-area-main')[0];
+
 const newMessage = chatArea.lastElementChild;
 if (newMessage) newMessage.scrollIntoView({ behavior: "smooth" });
 

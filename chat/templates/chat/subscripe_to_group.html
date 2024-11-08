@@ -10,7 +10,7 @@
             To continue, you need to subscribe to the group.
             <form method="POST">
                 {% csrf_token %}
-                <button>Subscribe</button>
+                <button>Subscripe</button>
             </form>
         </h2>
     </div>
@@ -20,7 +20,7 @@
 
 {% block script %}
 <script>
-    let user_status_wb = new WebSocket(`wss://{{ domain }}/websocket/user/status/${ {{ request.user.id }} }`);
+    let user_status_wb = new WebSocket(`ws://{{ domain }}/websocket/user/status/${ {{ request.user.id }} }`);
 </script>
 <script src="{% static 'js/inbox.js' %}"></script>
 {% endblock script %}

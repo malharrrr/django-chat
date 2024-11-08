@@ -7,5 +7,4 @@ class SingleChatMessageInline(admin.TabularInline):
 @admin.register(Chat)
 class ChatAdmin(admin.ModelAdmin):
     inlines = [SingleChatMessageInline]
-    list_display = ['name', 'owner', 'created', 'time', 'type']
-        
+    list_display = ['name', 'owner', 'created', 'time', 'type']        
